@@ -1,14 +1,16 @@
 package net.enjoyfelix.truedamageapi;
 
-import com.avaje.ebean.validation.NotNull;
+import net.enjoyfelix.truedamageapi.services.resistance.ResistanceProvider;
 import net.enjoyfelix.truedamageapi.services.strength.StrengthProvider;
-import net.minecraft.server.v1_8_R3.BlockPressurePlateBinary;
+import net.enjoyfelix.truedamageapi.services.weakness.WeaknessProvider;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.craftbukkit.v1_8_R3.entity.CraftPlayer;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
@@ -98,33 +100,37 @@ public class DamageUtils {
         final Map<EntityDamageEvent.DamageModifier, Double> resMap = new HashMap<>();
 
         // compute the base damage;
-        double damage = 1.0d;
-        Bukkit.broadcastMessage("Computed base:" + computeBaseDamage(damager, originalDamage));
-
+        double damage = computeBaseDamage(damager, originalDamage);
+        resMap.put(EntityDamageEvent.DamageModifier.BASE, damage);
 
         // blocking test
-        // previously had a "ignorsArmor" check but i dont think it applies
-        if (damagee.isBlocking() && damage > 0.0F) {
-            damage = (1.0F + damage) * 0.5F;
-            resMap.put(EntityDamageEvent.DamageModifier.BLOCKING, 0.5);
+        // previously had a "ignoresArmor" check but i dont think it applies
+        // > 1.0 while  it is 0 in the code because the +1 could actually add damage instead of reducing them
+        if (damagee.isBlocking() && damage > 1.0F) {
+            final double blockingDeductible = -(damage - 1) * 0.5;
+            damage += blockingDeductible;
+            resMap.put(EntityDamageEvent.DamageModifier.BLOCKING, blockingDeductible);
         }
 
         // update the damage based on the armor and magic
         // get the armor's ratio
         final double armorModifier = getArmorModifier(damagee);
-        damage *= armorModifier;
-        resMap.put(EntityDamageEvent.DamageModifier.ARMOR, armorModifier);
+        final double armorDeductible = -damage * (1 - armorModifier);
+        damage += armorDeductible;
+        resMap.put(EntityDamageEvent.DamageModifier.ARMOR, armorDeductible);
 
 
         // apply the resistance;
         final double resistancePercent = getResistanceScalar(damagee);
-        damage *= resistancePercent;
-        resMap.put(EntityDamageEvent.DamageModifier.RESISTANCE, resistancePercent);
+        final double resistanceDeductible = -damage * (1 - resistancePercent);
+        damage += resistanceDeductible;
+        resMap.put(EntityDamageEvent.DamageModifier.RESISTANCE, resistanceDeductible);
 
         // apply the level of protection
         final double protectionPercent = getArmorEnchantmentsPercent(damagee);
-        damage *= protectionPercent;
-        resMap.put(EntityDamageEvent.DamageModifier.MAGIC, protectionPercent);
+        final double protectionDeductible = -damage * (1 - protectionPercent);
+        damage += protectionDeductible;
+        resMap.put(EntityDamageEvent.DamageModifier.MAGIC, protectionDeductible);
 
 
         // TODO: needs fixing, wrong value
@@ -132,10 +138,10 @@ public class DamageUtils {
         double damageCopy = damage;
         final double currentAbsorptionHearts = ((CraftPlayer) damagee).getHandle().getAbsorptionHearts();
         damage -= currentAbsorptionHearts;
-        if (damage > 0)
+        if (damage < 0)
             damage = 0;
 
-        final double takenAbsorptionHearts = damageCopy - damage;
+        final double takenAbsorptionHearts = damage - damageCopy;
         resMap.put(EntityDamageEvent.DamageModifier.ABSORPTION, takenAbsorptionHearts);
 
         return resMap;
@@ -184,23 +190,13 @@ public class DamageUtils {
      * @param damagee The damagee
      * @return 1 - ([resistance level + 1] / 5);
      */
-    public static float getResistanceScalar(final Player damagee) {
-        // filter resistance from the active effects
-        final Optional<PotionEffect> resistance = damagee.getActivePotionEffects().stream()
-                .filter(effect -> effect.getType().equals(PotionEffectType.DAMAGE_RESISTANCE))
-                .peek(System.out::println)
-                .findFirst();
+    public static double getResistanceScalar(final Player damagee) {
+        // get the resistance provider
+        final DamageAPI damageAPI = DamageAPI.getInstance();
+        final ResistanceProvider resistanceProvider = damageAPI.getResistanceProvider();
 
-        // does the player have resistance ?
-        if (!resistance.isPresent())
-            return 1F;
-
-        // calculate the  resistance from the level
-        // +1 to account for the ingame difference
-        final int resistanceLevel = (resistance.get().getAmplifier() + 1);
-
-        // compute the scalar, cap at 0
-        return Math.max(1 - (resistanceLevel / 5.0F), 0f);
+        // return the scalar of the player
+        return resistanceProvider.getTotalScalar(damagee);
     }
 
     /**
@@ -284,37 +280,28 @@ public class DamageUtils {
             // compute the bonus given by enchantments from the item and the entity type
             final Map<Enchantment, Integer> activeEnchantments = itemInHand.getEnchantments();
             // TODO: specify entity types
-            enchantementBonus = getGlintDamageBonus(activeEnchantments, EntityType.PLAYER);
+            enchantementBonus = getEnchantmentBonus(activeEnchantments, EntityType.PLAYER);
         }
 
-        // get the strength scalar
+        // we need to know if the original damage was a crit or not
+        // we can know using math and the vanilla providers
         final DamageAPI damageAPI = DamageAPI.getInstance();
+        final double vanillaStrengthScalar = damageAPI.getVanillaStrengthProvider().getTotalScalar(player);
+        final double vanillaWeaknessReduction = damageAPI.getVanillaWeaknessProvider().getDamageReduction(player);
+        final double critScalar = isHitCritical(originalDamage, baseDamage, vanillaStrengthScalar, vanillaWeaknessReduction,enchantementBonus) ? 1.5 : 1;
+
+
+        // get the new strength scalar
         final StrengthProvider strengthProvider = damageAPI.getStrengthProvider();
         final double strengthScalar = strengthProvider.getTotalScalar(player);
 
-
-        // we need to know if the original damage was a crit or not
-        // we know using math and the default strengthProvider
-        final double vanillaStrengthScalar = damageAPI.getVanillaStrengthProvider().getTotalScalar(player);
-        final double critScalar = isHitCritical(originalDamage, baseDamage, vanillaStrengthScalar, enchantementBonus) ? 1.5 : 1;
-        if (critScalar == 1.5){
-            Bukkit.broadcastMessage("§4CRITICAL");
-        }
-
+        // get the new weakness reduction
+        final WeaknessProvider weaknessProvider = damageAPI.getWeaknessProvider();
+        final double weaknessReduction = weaknessProvider.getDamageReduction(player);
 
         // return the total damages
-        return (baseDamage * strengthScalar * critScalar) + enchantementBonus;
+        return ((baseDamage - weaknessReduction) * strengthScalar * critScalar) + enchantementBonus;
     }
-
-    /* Calcul des dégats
-    *   damage = dégats de l'item + 1
-    *   critScalar = 1.5
-    *   sharpness bonus = 1.25 * level
-    *   strength scalar = (damage * (level + 1) * 1.3)
-    *
-    *   Calcul : (damage * strengthscalar + 1 ) * critScalar + sharpness
-    * */
-
 
     private static int getBaseDamageForItem(final ItemStack is){
         // get the base damage of the item from the material
@@ -322,7 +309,17 @@ public class DamageUtils {
         return ITEM_DAMAGE_MAP.getOrDefault(material, 0) + 1 ;
     }
 
-    private static double getGlintDamageBonus(final Map<Enchantment, Integer> activeEnchants, final EntityType mobType){
+    private static double getEnchantmentBonus(final ItemStack is, final EntityType mobType){
+        // early termination if the item is null or unenchanted
+        final Map<Enchantment, Integer> activeEnchants;
+        if (is == null || (activeEnchants = is.getEnchantments()) == null || activeEnchants.isEmpty())
+            return 0;
+
+        //
+        return getEnchantmentBonus(activeEnchants, mobType);
+    }
+
+    private static double getEnchantmentBonus(final Map<Enchantment, Integer> activeEnchants, final EntityType mobType){
         double enchantBonus = 0;
 
         // early termination if the item is not enchanted
@@ -346,8 +343,50 @@ public class DamageUtils {
         return enchantBonus;
     }
 
-    private static boolean isHitCritical(double originalDamage, double basedamage, double strengthScalar, double enchantBonus){
-        return (originalDamage - enchantBonus) / (basedamage * strengthScalar) == 1.5;
+    private static boolean isHitCritical(double originalDamage, double basedamage, double strengthScalar, double weaknessReduction, double enchantBonus){
+        // float conversion issue so i have to do this
+        return (int) ((originalDamage - enchantBonus) * 100) >= (int) ((basedamage - weaknessReduction) * strengthScalar * 150);
+    }
+
+    private static boolean isHitCritical(final EntityDamageByEntityEvent event) {
+        final Entity _damager = event.getDamager();
+        if (!(_damager instanceof Player))
+            return false;
+
+        final Player player = (Player) _damager;
+        final double originalDamage = event.getDamage();
+
+        // get the base damage dealt by the item
+        final ItemStack itemInHand = player.getItemInHand();
+        final double baseDamage;
+        final double enchantementBonus;
+
+        // if the player isn't holding anything
+        if (itemInHand == null) {
+            baseDamage = 1;
+            enchantementBonus = 0;
+        }
+
+        // the player is actually holding something
+        else {
+            baseDamage = getBaseDamageForItem(itemInHand);
+
+            // compute the bonus given by enchantments from the item and the entity type
+            final Map<Enchantment, Integer> activeEnchantments = itemInHand.getEnchantments();
+            // TODO: specify entity types
+            enchantementBonus = getEnchantmentBonus(activeEnchantments, EntityType.PLAYER);
+        }
+
+        // get the strength scalar
+        final DamageAPI damageAPI = DamageAPI.getInstance();
+        final StrengthProvider strengthProvider  = damageAPI.getVanillaStrengthProvider();
+        final double strengthScalar = strengthProvider.getTotalScalar(player);
+
+        // get the weakness reduction
+        final WeaknessProvider weaknessProvider = damageAPI.getVanillaWeaknessProvider();
+        final double weaknessReduction = weaknessProvider.getDamageReduction(player);
+
+        return isHitCritical(originalDamage, baseDamage, strengthScalar, weaknessReduction, enchantementBonus);
     }
 
 /*    public int functionA(int level, final Enchantment enchantment) {
