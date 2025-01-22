@@ -8,7 +8,7 @@ import org.bukkit.entity.Player;
 public class VanillaStrengthProvider implements StrengthProvider{
     @Override
     public double getBaseScalar() {
-        return 1.3;
+        return (float) 1.3;
     }
 
     @Override

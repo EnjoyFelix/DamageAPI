@@ -1,5 +1,6 @@
 package net.enjoyfelix.truedamageapi.services.resistance;
 
+import net.enjoyfelix.truedamageapi.services.ScalarEffectProvider;
 import net.minecraft.server.v1_8_R3.MobEffect;
 import net.minecraft.server.v1_8_R3.MobEffectList;
 import org.bukkit.craftbukkit.v1_8_R3.entity.CraftPlayer;
