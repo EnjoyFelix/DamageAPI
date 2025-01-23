@@ -345,12 +345,13 @@ public class DamageUtils {
         return (int) ((originalDamage - enchantBonus) * 100) >= (int) ((basedamage - weaknessReduction) * strengthScalar * 150);
     }
 
-    private static boolean isHitCritical(final EntityDamageByEntityEvent event) {
+    public static boolean isHitCritical(final EntityDamageByEntityEvent event) {
         final Entity _damager = event.getDamager();
         if (!(_damager instanceof Player))
             return false;
 
         final Player player = (Player) _damager;
+        final EntityType damagedEntityType = event.getEntityType();
         final double originalDamage = event.getDamage();
 
         // get the base damage dealt by the item
@@ -370,8 +371,7 @@ public class DamageUtils {
 
             // compute the bonus given by enchantments from the item and the entity type
             final Map<Enchantment, Integer> activeEnchantments = itemInHand.getEnchantments();
-            // TODO: specify entity types
-            enchantementBonus = getEnchantmentBonus(activeEnchantments, EntityType.PLAYER);
+            enchantementBonus = getEnchantmentBonus(activeEnchantments, damagedEntityType);
         }
 
         // get the strength scalar

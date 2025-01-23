@@ -28,7 +28,7 @@ public class DamageListener implements Listener {
         // DEBUG:
         final Map<EntityDamageEvent.DamageModifier, Double> damages = new HashMap<>();
         for (final EntityDamageEvent.DamageModifier modifier : EntityDamageEvent.DamageModifier.values()) {
-            damages.put(modifier, event.getDamage());
+            damages.put(modifier, event.getDamage(modifier));
         }
         _damager.sendMessage(getPrettyDamageMap(damages));
 
@@ -37,9 +37,15 @@ public class DamageListener implements Listener {
 
         // DEBUG
         for (final EntityDamageEvent.DamageModifier modifier : EntityDamageEvent.DamageModifier.values()) {
-            damages.put(modifier, event.getDamage());
+            damages.put(modifier, event.getDamage(modifier));
         }
         _damager.sendMessage(getPrettyDamageMap(damages));
+    }
+
+    @EventHandler
+    public void debugCriticalHit(final EntityDamageByEntityEvent event){
+        if (DamageUtils.isHitCritical(event))
+            event.getDamager().sendMessage("§4Critical !");
     }
 
     /**
