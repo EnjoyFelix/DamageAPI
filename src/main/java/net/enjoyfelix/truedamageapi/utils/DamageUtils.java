@@ -1,9 +1,9 @@
-package net.enjoyfelix.truedamageapi;
+package net.enjoyfelix.truedamageapi.utils;
 
+import net.enjoyfelix.truedamageapi.DamageAPI;
 import net.enjoyfelix.truedamageapi.services.resistance.ResistanceProvider;
 import net.enjoyfelix.truedamageapi.services.strength.StrengthProvider;
 import net.enjoyfelix.truedamageapi.services.weakness.WeaknessProvider;
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.craftbukkit.v1_8_R3.entity.CraftPlayer;
 import org.bukkit.enchantments.Enchantment;
@@ -13,8 +13,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
 
 import java.util.*;
 
@@ -95,13 +93,14 @@ public class DamageUtils {
 
 
     // SOURCED FROM EntityHuman::d(DamageSource damagesource, float f) {
-    public static Map<EntityDamageEvent.DamageModifier, Double> computeDamage(final Player damager, final Player damagee, double originalDamage) {
-        // the result
-        final Map<EntityDamageEvent.DamageModifier, Double> resMap = new HashMap<>();
+    public static void computeDamage(final EntityDamageByEntityEvent event) {
+        final Player damager = (Player) event.getDamager();
+        final Player damagee = (Player) event.getEntity();
+        double originalDamage = event.getOriginalDamage(EntityDamageEvent.DamageModifier.BASE);
 
         // compute the base damage;
         double damage = computeBaseDamage(damager, originalDamage);
-        resMap.put(EntityDamageEvent.DamageModifier.BASE, damage);
+        event.setDamage(EntityDamageEvent.DamageModifier.BASE, damage);
 
         // blocking test
         // previously had a "ignoresArmor" check but i dont think it applies
@@ -109,7 +108,7 @@ public class DamageUtils {
         if (damagee.isBlocking() && damage > 1.0F) {
             final double blockingDeductible = -(damage - 1) * 0.5;
             damage += blockingDeductible;
-            resMap.put(EntityDamageEvent.DamageModifier.BLOCKING, blockingDeductible);
+            event.setDamage(EntityDamageEvent.DamageModifier.BLOCKING, blockingDeductible);
         }
 
         // update the damage based on the armor and magic
@@ -117,20 +116,20 @@ public class DamageUtils {
         final double armorModifier = getArmorModifier(damagee);
         final double armorDeductible = -damage * (1 - armorModifier);
         damage += armorDeductible;
-        resMap.put(EntityDamageEvent.DamageModifier.ARMOR, armorDeductible);
+        event.setDamage(EntityDamageEvent.DamageModifier.ARMOR, armorDeductible);
 
 
         // apply the resistance;
         final double resistancePercent = getResistanceScalar(damagee);
         final double resistanceDeductible = -damage * (1 - resistancePercent);
         damage += resistanceDeductible;
-        resMap.put(EntityDamageEvent.DamageModifier.RESISTANCE, resistanceDeductible);
+        event.setDamage(EntityDamageEvent.DamageModifier.RESISTANCE, resistanceDeductible);
 
         // apply the level of protection
         final double protectionPercent = getArmorEnchantmentsPercent(damagee);
         final double protectionDeductible = -damage * (1 - protectionPercent);
         damage += protectionDeductible;
-        resMap.put(EntityDamageEvent.DamageModifier.MAGIC, protectionDeductible);
+        event.setDamage(EntityDamageEvent.DamageModifier.MAGIC, protectionDeductible);
 
 
         // TODO: needs fixing, wrong value
@@ -142,10 +141,8 @@ public class DamageUtils {
             damage = 0;
 
         final double takenAbsorptionHearts = damage - damageCopy;
-        resMap.put(EntityDamageEvent.DamageModifier.ABSORPTION, takenAbsorptionHearts);
-
-        return resMap;
-    }
+        event.setDamage(EntityDamageEvent.DamageModifier.ABSORPTION, takenAbsorptionHearts);
+    };
 
     private static float getArmorModifier(final Player damagee) {
         return (25f - getArmorCoverForPlayer(damagee)) / 25f;

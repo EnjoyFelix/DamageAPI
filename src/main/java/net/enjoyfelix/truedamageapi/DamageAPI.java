@@ -1,5 +1,6 @@
 package net.enjoyfelix.truedamageapi;
 
+import net.enjoyfelix.truedamageapi.listeners.DamageListener;
 import net.enjoyfelix.truedamageapi.services.resistance.ResistanceProvider;
 import net.enjoyfelix.truedamageapi.services.resistance.VanillaResistanceProvider;
 import net.enjoyfelix.truedamageapi.services.strength.StrengthProvider;

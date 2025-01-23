@@ -1,15 +1,11 @@
-package net.enjoyfelix.truedamageapi;
-
-import net.minecraft.server.v1_8_R3.ItemArmor;
-import org.bukkit.Bukkit;
-import org.bukkit.Material;
+package net.enjoyfelix.truedamageapi.listeners;
+import net.enjoyfelix.truedamageapi.utils.DamageUtils;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.inventory.ItemStack;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -29,29 +25,21 @@ public class DamageListener implements Listener {
         if (!(_damager instanceof Player) || !(_damagee instanceof Player))
             return;
 
-        // get the entities as player
-        final Player damager = (Player) _damager;
-        final Player damagee = (Player) _damagee;
-
-        // get a copy of spigot's intepretation of the damage
+        // DEBUG:
         final Map<EntityDamageEvent.DamageModifier, Double> damages = new HashMap<>();
-        for (final EntityDamageEvent.DamageModifier type : EntityDamageEvent.DamageModifier.values()) {
-
-            // get the damage of the type and copy it into the new map
-            final double dmg = event.getDamage(type);
-            damages.put(type, dmg);
+        for (final EntityDamageEvent.DamageModifier modifier : EntityDamageEvent.DamageModifier.values()) {
+            damages.put(modifier, event.getDamage());
         }
+        _damager.sendMessage(getPrettyDamageMap(damages));
 
-        damager.sendMessage(getPrettyDamageMap(damages));
+        // compute the damages
+        DamageUtils.computeDamage(event);
 
-        // calculate our own;
-        final Map<EntityDamageEvent.DamageModifier, Double> computesDamages = DamageUtils.computeDamage(damager, damagee, event.getDamage());
-        for (final EntityDamageEvent.DamageModifier type : EntityDamageEvent.DamageModifier.values()) {
-            if (computesDamages.containsKey(type)) continue;
-            computesDamages.put(type, 0.0);
+        // DEBUG
+        for (final EntityDamageEvent.DamageModifier modifier : EntityDamageEvent.DamageModifier.values()) {
+            damages.put(modifier, event.getDamage());
         }
-
-        damager.sendMessage(getPrettyDamageMap(computesDamages));
+        _damager.sendMessage(getPrettyDamageMap(damages));
     }
 
     /**
