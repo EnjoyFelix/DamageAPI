@@ -1,9 +1,9 @@
 package net.enjoyfelix.truedamageapi.services;
 
+import lombok.NonNull;
 import org.bukkit.entity.Player;
 
 import javax.annotation.Nonnegative;
-import javax.annotation.Nonnull;
 
 public interface EffectProvider {
 
@@ -16,5 +16,5 @@ public interface EffectProvider {
      * @param time How long (in ticks) the player should have the effect
      * @param force Ovveride the previous effect
      */
-    void setAmplier(final @Nonnull  Player player, final  @Nonnegative double amplifier, @Nonnegative final int time, final boolean force);
+    void setAmplier(final @NonNull Player player, final double amplifier, @Nonnegative final int time, final boolean force);
 }
