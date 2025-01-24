@@ -352,7 +352,7 @@ public class DamageUtils {
 
         final Player player = (Player) _damager;
         final EntityType damagedEntityType = event.getEntityType();
-        final double originalDamage = event.getDamage();
+        final double originalDamage = event.getOriginalDamage(EntityDamageEvent.DamageModifier.BASE);
 
         // get the base damage dealt by the item
         final ItemStack itemInHand = player.getItemInHand();
