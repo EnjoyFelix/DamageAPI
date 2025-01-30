@@ -19,7 +19,7 @@ import java.util.*;
 public class DamageUtils {
 
     private static final Random random = new Random();
-    private static final Map<Material, Integer> ARMOR_RESISTANCE_MAP = new HashMap<Material, Integer>();
+    private static final Map<Material, Integer> ARMOR_RESISTANCE_MAP = new HashMap<>();
     private static final Map<Material, Integer> ITEM_DAMAGE_MAP = new HashMap<>();
     private static final Set<EntityType> UNDEAD_MOBS = new HashSet<>();
 
@@ -142,7 +142,7 @@ public class DamageUtils {
 
         final double takenAbsorptionHearts = damage - damageCopy;
         event.setDamage(EntityDamageEvent.DamageModifier.ABSORPTION, takenAbsorptionHearts);
-    };
+    }
 
     private static float getArmorModifier(final Player damagee) {
         return (25f - getArmorCoverForPlayer(damagee)) / 25f;
@@ -159,9 +159,8 @@ public class DamageUtils {
         final ItemStack[] armor = damagee.getEquipment().getArmorContents();
 
         // sum every piece's cover
-        for (int k = 0; k < armor.length; ++k) {
+        for (final ItemStack currentPiece : armor) {
             // filter for non null items
-            final ItemStack currentPiece = armor[k];
             if (currentPiece == null)
                 continue;
 

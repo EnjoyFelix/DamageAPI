@@ -1,13 +1,12 @@
 package net.enjoyfelix.truedamageapi.services.weakness;
 
+import lombok.NonNull;
 import net.minecraft.server.v1_8_R3.MobEffect;
 import net.minecraft.server.v1_8_R3.MobEffectList;
 import org.bukkit.craftbukkit.v1_8_R3.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
-
-import javax.annotation.Nonnull;
 
 public class VanillaWeaknessProvider implements WeaknessProvider {
 
@@ -21,7 +20,7 @@ public class VanillaWeaknessProvider implements WeaknessProvider {
     }
 
     @Override
-    public void setAmplier(@Nonnull final Player player, double amplifier, int time, boolean force) {
+    public void setAmplier(final @NonNull Player player, double amplifier, int time, boolean force) {
         // give weakness to the player
         final PotionEffect effect = new PotionEffect(PotionEffectType.WEAKNESS, (int) amplifier, time);
         player.addPotionEffect(effect, force);

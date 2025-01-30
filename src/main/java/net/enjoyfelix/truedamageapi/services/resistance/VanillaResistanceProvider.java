@@ -1,14 +1,12 @@
 package net.enjoyfelix.truedamageapi.services.resistance;
 
-import net.enjoyfelix.truedamageapi.services.ScalarEffectProvider;
+import lombok.NonNull;
 import net.minecraft.server.v1_8_R3.MobEffect;
 import net.minecraft.server.v1_8_R3.MobEffectList;
 import org.bukkit.craftbukkit.v1_8_R3.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
-
-import javax.annotation.Nonnull;
 
 public class VanillaResistanceProvider implements ResistanceProvider {
     @Override
@@ -26,7 +24,7 @@ public class VanillaResistanceProvider implements ResistanceProvider {
     }
 
     @Override
-    public void setAmplier(@Nonnull final Player player, double amplifier, int time, boolean force) {
+    public void setAmplier(final @NonNull Player player, double amplifier, int time, boolean force) {
         // give resistance to the player
         final PotionEffect effect = new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, (int) amplifier, time);
         player.addPotionEffect(effect, force);
