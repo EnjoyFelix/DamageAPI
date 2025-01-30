@@ -3,6 +3,7 @@ import net.enjoyfelix.truedamageapi.utils.DamageUtils;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
@@ -16,7 +17,7 @@ public class DamageListener implements Listener {
      * Handles a player hitting another player.
      * @param event the event
      */
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOWEST)
     public void onPlayerDamagePlayer(final EntityDamageByEntityEvent event) {
         final Entity _damager = event.getDamager();
         final Entity _damagee = event.getEntity();
@@ -40,12 +41,6 @@ public class DamageListener implements Listener {
             damages.put(modifier, event.getDamage(modifier));
         }
         _damager.sendMessage(getPrettyDamageMap(damages));
-    }
-
-    @EventHandler
-    public void debugCriticalHit(final EntityDamageByEntityEvent event){
-        if (DamageUtils.isHitCritical(event))
-            event.getDamager().sendMessage("§4Critical !");
     }
 
     /**

@@ -1,6 +1,9 @@
 package net.enjoyfelix.truedamageapi;
 
+import lombok.Getter;
 import net.enjoyfelix.truedamageapi.listeners.DamageListener;
+import net.enjoyfelix.truedamageapi.services.item.ItemDamageProvider;
+import net.enjoyfelix.truedamageapi.services.item.VanillaItemDamageProvider;
 import net.enjoyfelix.truedamageapi.services.resistance.ResistanceProvider;
 import net.enjoyfelix.truedamageapi.services.resistance.VanillaResistanceProvider;
 import net.enjoyfelix.truedamageapi.services.strength.StrengthProvider;
@@ -13,25 +16,36 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public final class DamageAPI extends JavaPlugin {
 
+    @Getter
     private static DamageAPI instance;
+    // both these providers are used to check if the damage dealt was a crit
+    @Getter
     private final VanillaStrengthProvider vanillaStrengthProvider = new VanillaStrengthProvider();
+    @Getter
     private final VanillaWeaknessProvider vanillaWeaknessProvider = new VanillaWeaknessProvider();
+    @Getter
+    private final VanillaItemDamageProvider vanillaItemDamageProvider = new VanillaItemDamageProvider();
+
+    private boolean registered = false;
 
     @Override
     public void onEnable() {
         instance = this;
         Bukkit.broadcastMessage("Damage API By EnjoyFelix !");
+    }
+
+    public void register(){
+        if (registered)
+            return;
+        // register the listener
         Bukkit.getPluginManager().registerEvents(new DamageListener(), this);
 
-        // registers the default providers;
+        // register the default providers;
         Bukkit.getServicesManager().register(StrengthProvider.class, vanillaStrengthProvider, this, ServicePriority.Normal);
         Bukkit.getServicesManager().register(WeaknessProvider.class, vanillaWeaknessProvider, this, ServicePriority.Normal);
         Bukkit.getServicesManager().register(ResistanceProvider.class, new VanillaResistanceProvider(), this, ServicePriority.Normal);
-    }
-
-    @Override
-    public void onDisable() {
-        // Plugin shutdown logic
+        Bukkit.getServicesManager().register(ItemDamageProvider.class, vanillaItemDamageProvider, this, ServicePriority.Normal);
+        this.registered = true;
     }
 
     public StrengthProvider getStrengthProvider() {
@@ -46,15 +60,8 @@ public final class DamageAPI extends JavaPlugin {
         return Bukkit.getServicesManager().getRegistration(WeaknessProvider.class).getProvider();
     }
 
-    public VanillaStrengthProvider getVanillaStrengthProvider() {
-        return vanillaStrengthProvider;
+    public ItemDamageProvider getItemDamageProvider(){
+        return Bukkit.getServicesManager().getRegistration(ItemDamageProvider.class).getProvider();
     }
 
-    public VanillaWeaknessProvider getVanillaWeaknessProvider() {
-        return vanillaWeaknessProvider;
-    }
-
-    public static DamageAPI getInstance() {
-        return instance;
-    }
 }
