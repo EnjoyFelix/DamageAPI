@@ -272,7 +272,7 @@ public class DamageUtils {
 
         // the player is actually holding something
         else {
-            baseDamage = getBaseDamageForItem(itemInHand);
+            baseDamage = DamageAPI.getInstance().getVanillaItemDamageProvider().getDamage(itemInHand);
 
             // compute the bonus given by enchantments from the item and the entity type
             final Map<Enchantment, Integer> activeEnchantments = itemInHand.getEnchantments();
@@ -299,13 +299,6 @@ public class DamageUtils {
         // return the total damages
         return ((baseDamage - weaknessReduction) * strengthScalar * critScalar) + enchantementBonus;
     }
-
-    private static int getBaseDamageForItem(final ItemStack is){
-        // get the base damage of the item from the material
-        final Material material = is.getType();
-        return ITEM_DAMAGE_MAP.getOrDefault(material, 0) + 1 ;
-    }
-
     private static double getEnchantmentBonus(final ItemStack is, final EntityType mobType){
         // early termination if the item is null or unenchanted
         final Map<Enchantment, Integer> activeEnchants;
@@ -350,6 +343,8 @@ public class DamageUtils {
         if (!(_damager instanceof Player))
             return false;
 
+        // get the strength scalar
+        final DamageAPI damageAPI = DamageAPI.getInstance();
         final Player player = (Player) _damager;
         final EntityType damagedEntityType = event.getEntityType();
         final double originalDamage = event.getOriginalDamage(EntityDamageEvent.DamageModifier.BASE);
@@ -367,15 +362,13 @@ public class DamageUtils {
 
         // the player is actually holding something
         else {
-            baseDamage = getBaseDamageForItem(itemInHand);
+            baseDamage = damageAPI.getItemDamageProvider().getDamage(itemInHand);
 
             // compute the bonus given by enchantments from the item and the entity type
             final Map<Enchantment, Integer> activeEnchantments = itemInHand.getEnchantments();
             enchantementBonus = getEnchantmentBonus(activeEnchantments, damagedEntityType);
         }
 
-        // get the strength scalar
-        final DamageAPI damageAPI = DamageAPI.getInstance();
         final StrengthProvider strengthProvider  = damageAPI.getVanillaStrengthProvider();
         final double strengthScalar = strengthProvider.getTotalScalar(player);
 
