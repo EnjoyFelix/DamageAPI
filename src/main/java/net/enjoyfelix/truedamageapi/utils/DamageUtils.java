@@ -5,7 +5,6 @@ import net.enjoyfelix.truedamageapi.services.resistance.ResistanceProvider;
 import net.enjoyfelix.truedamageapi.services.strength.StrengthProvider;
 import net.enjoyfelix.truedamageapi.services.weakness.WeaknessProvider;
 import org.bukkit.Material;
-import org.bukkit.craftbukkit.v1_8_R3.entity.CraftPlayer;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
@@ -14,6 +13,7 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.inventory.ItemStack;
 
+import java.lang.reflect.Method;
 import java.util.*;
 
 public class DamageUtils {
@@ -132,10 +132,9 @@ public class DamageUtils {
         event.setDamage(EntityDamageEvent.DamageModifier.MAGIC, protectionDeductible);
 
 
-        // TODO: needs fixing, wrong value
         // remove the absorption
         double damageCopy = damage;
-        final double currentAbsorptionHearts = ((CraftPlayer) damagee).getHandle().getAbsorptionHearts();
+        final double currentAbsorptionHearts = getAbsorptionHearts(damagee);
         damage -= currentAbsorptionHearts;
         if (damage < 0)
             damage = 0;
@@ -195,10 +194,21 @@ public class DamageUtils {
         return resistanceProvider.getTotalScalar(damagee);
     }
 
-    /**
-     * @param damagee
-     * @return
-     */
+    private static double getAbsorptionHearts(final Player damagee) {
+        try {
+            // get the "craftplayer"
+            Object entityPlayer = damagee.getClass().getMethod("getHandle").invoke(damagee);
+
+            // the "getAbsorptionHearts" method
+            Method methodGetAbsorptionHeart = entityPlayer.getClass().getDeclaredMethod("getAbsorptionHearts");
+
+            // invoke
+            return (Double) methodGetAbsorptionHeart.invoke(entityPlayer);
+        } catch (Exception e) {
+            return 0.0;
+        }
+    }
+
     public static float getArmorEnchantmentsPercent(final Player damagee) {
         final ItemStack[] armorContent = damagee.getEquipment().getArmorContents();
 

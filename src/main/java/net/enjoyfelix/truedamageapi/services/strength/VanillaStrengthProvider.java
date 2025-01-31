@@ -1,9 +1,6 @@
 package net.enjoyfelix.truedamageapi.services.strength;
 
 import lombok.NonNull;
-import net.minecraft.server.v1_8_R3.MobEffect;
-import net.minecraft.server.v1_8_R3.MobEffectList;
-import org.bukkit.craftbukkit.v1_8_R3.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -18,7 +15,11 @@ public class VanillaStrengthProvider implements StrengthProvider{
     @Override
     public double getAmplifier(final Player player) {
         // get the active strength effect
-        final MobEffect strengthEffect = ((CraftPlayer) player).getHandle().getEffect(MobEffectList.INCREASE_DAMAGE);
+        final PotionEffect strengthEffect = player.getActivePotionEffects()
+                .stream()
+                .filter(effect -> effect.getType().equals(PotionEffectType.INCREASE_DAMAGE))
+                .findFirst()
+                .orElse(null);
 
         // + 1 because minecraft starts at 0
         return strengthEffect != null ? strengthEffect.getAmplifier() + 1 : 0;
