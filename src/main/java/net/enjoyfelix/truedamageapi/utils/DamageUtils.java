@@ -1,6 +1,10 @@
 package net.enjoyfelix.truedamageapi.utils;
 
 import net.enjoyfelix.truedamageapi.DamageAPI;
+import net.enjoyfelix.truedamageapi.services.bonusdamage.BonusProvider;
+import net.enjoyfelix.truedamageapi.services.bonusdamage.VanillaBonusProvider;
+import net.enjoyfelix.truedamageapi.services.item.ItemDamageProvider;
+import net.enjoyfelix.truedamageapi.services.item.VanillaItemDamageProvider;
 import net.enjoyfelix.truedamageapi.services.resistance.ResistanceProvider;
 import net.enjoyfelix.truedamageapi.services.strength.StrengthProvider;
 import net.enjoyfelix.truedamageapi.services.weakness.WeaknessProvider;
@@ -270,30 +274,15 @@ public class DamageUtils {
         // get the base damage dealt by the item
         final DamageAPI damageAPI = DamageAPI.getInstance();
         final ItemStack itemInHand = player.getItemInHand();
-        final double baseDamage;
-        final double enchantementBonus;
-
-        // if the player isn't holding anything
-        if (itemInHand == null) {
-            baseDamage = 1;
-            enchantementBonus = 0;
-        }
-
-        // the player is actually holding something
-        else {
-            baseDamage = DamageAPI.getInstance().getVanillaItemDamageProvider().getDamage(itemInHand);
-
-            // compute the bonus given by enchantments from the item and the entity type
-            final Map<Enchantment, Integer> activeEnchantments = itemInHand.getEnchantments();
-            // TODO: specify entity types
-            enchantementBonus = damageAPI.getBonusProvider().getBonus(itemInHand, EntityType.PLAYER);
-        }
 
         // we need to know if the original damage was a crit or not
         // we can know using math and the vanilla providers
+        final double vanillaBaseDamage = damageAPI.getVanillaItemDamageProvider().getDamage(itemInHand);
+        // TODO: EntityType
+        final double vanillaEnchantBonus = damageAPI.getVanillaBonusProvider().getBonus(itemInHand, EntityType.PLAYER);
         final double vanillaStrengthScalar = damageAPI.getVanillaStrengthProvider().getTotalScalar(player);
         final double vanillaWeaknessReduction = damageAPI.getVanillaWeaknessProvider().getDamageReduction(player);
-        final double critScalar = isHitCritical(originalDamage, baseDamage, vanillaStrengthScalar, vanillaWeaknessReduction,enchantementBonus) ? 1.5 : 1;
+        final double critScalar = isHitCritical(originalDamage, vanillaBaseDamage, vanillaStrengthScalar, vanillaWeaknessReduction, vanillaEnchantBonus) ? 1.5 : 1;
 
 
         // get the new strength scalar
@@ -304,8 +293,16 @@ public class DamageUtils {
         final WeaknessProvider weaknessProvider = damageAPI.getWeaknessProvider();
         final double weaknessReduction = weaknessProvider.getDamageReduction(player);
 
+        // get the new base base
+        final ItemDamageProvider itemDamageProvider = damageAPI.getItemDamageProvider();
+        final double baseDamage = itemDamageProvider.getDamage(itemInHand);
+
+        // get the new bonus
+        final BonusProvider bonusProvider = damageAPI.getBonusProvider();
+        final double enchantBonus = bonusProvider.getBonus(itemInHand, EntityType.PLAYER);
+
         // return the total damages
-        return ((baseDamage - weaknessReduction) * strengthScalar * critScalar) + enchantementBonus;
+        return ((baseDamage - weaknessReduction) * strengthScalar * critScalar) + enchantBonus;
     }
 
     /**
@@ -346,11 +343,12 @@ public class DamageUtils {
 
         // the player is actually holding something
         else {
-            baseDamage = damageAPI.getItemDamageProvider().getDamage(itemInHand);
+            final VanillaItemDamageProvider vanillaItemProvider = damageAPI.getVanillaItemDamageProvider();
+            baseDamage = vanillaItemProvider.getDamage(itemInHand);
 
             // compute the bonus given by enchantments from the item and the entity type
-            final Map<Enchantment, Integer> activeEnchantments = itemInHand.getEnchantments();
-            enchantementBonus = damageAPI.getBonusProvider().getBonus(itemInHand, damagedEntityType);
+            final VanillaBonusProvider vanillaBonusProvider = damageAPI.getVanillaBonusProvider();
+            enchantementBonus = vanillaBonusProvider.getBonus(itemInHand, damagedEntityType);
         }
 
         final StrengthProvider strengthProvider  = damageAPI.getVanillaStrengthProvider();

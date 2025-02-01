@@ -42,8 +42,12 @@ public class VanillaItemDamageProvider implements ItemDamageProvider {
     }
 
     @Override
-    public double getDamage(final @NonNull ItemStack itemstack) {
-        final Material material = itemstack.getType();
-        return ITEM_DAMAGE_MAP.getOrDefault(material, 0) + 1 ;
+    public double getDamage(final ItemStack itemstack) {
+        double res = 1;
+        if (itemstack != null){
+            final Material material = itemstack.getType();
+            res = ITEM_DAMAGE_MAP.getOrDefault(material, 0) + 1 ;
+        }
+        return res;
     }
 }
