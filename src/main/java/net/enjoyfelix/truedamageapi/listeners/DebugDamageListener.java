@@ -26,26 +26,21 @@ public class DebugDamageListener implements Listener {
         if (!(_damager instanceof Player) || !(_damagee instanceof Player))
             return;
 
-        // DEBUG:
-        final Map<EntityDamageEvent.DamageModifier, Double> damages = new HashMap<>();
-        for (final EntityDamageEvent.DamageModifier modifier : EntityDamageEvent.DamageModifier.values()) {
-            damages.put(modifier, event.getOriginalDamage(modifier));
-        }
-        _damager.sendMessage(getPrettyDamageMap(damages));
+        // THE TABLE
+        {
+            final Map<EntityDamageEvent.DamageModifier, Double> damages = new HashMap<>();
+            for (final EntityDamageEvent.DamageModifier modifier : EntityDamageEvent.DamageModifier.values()) {
+                damages.put(modifier, event.getOriginalDamage(modifier));
+            }
+            _damager.sendMessage(getPrettyDamageMap(damages));
 
-        // DEBUG
-        for (final EntityDamageEvent.DamageModifier modifier : EntityDamageEvent.DamageModifier.values()) {
-            damages.put(modifier, event.getDamage(modifier));
+            for (final EntityDamageEvent.DamageModifier modifier : EntityDamageEvent.DamageModifier.values()) {
+                damages.put(modifier, event.getDamage(modifier));
+            }
+            _damager.sendMessage(getPrettyDamageMap(damages));
         }
-        _damager.sendMessage(getPrettyDamageMap(damages));
-    }
 
-    /**
-     * shouts "CRITICAL" when a player deals critical damage
-     * @param event
-     */
-    @EventHandler
-    public void onDamage(final EntityDamageByEntityEvent event) {
+        // CRITICAL
         if (!DamageUtils.isHitCritical(event))
             return;
 
@@ -108,6 +103,11 @@ public class DebugDamageListener implements Listener {
             // print them
             typeLine.append(padding + "§" + (byte) color + typestr + "§r" + padding + "┃");
             valueLine.append(padding + "§" + (byte) color + dmgstr + "§r" + padding + "┃");
+
+            // update the color
+            color++;
+            if (color > 15)
+                color = 2;
         }
 
         // build the strings

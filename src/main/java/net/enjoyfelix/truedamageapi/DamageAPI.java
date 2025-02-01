@@ -2,6 +2,8 @@ package net.enjoyfelix.truedamageapi;
 
 import lombok.Getter;
 import net.enjoyfelix.truedamageapi.listeners.DamageListener;
+import net.enjoyfelix.truedamageapi.services.bonusdamage.BonusProvider;
+import net.enjoyfelix.truedamageapi.services.bonusdamage.VanillaBonusProvider;
 import net.enjoyfelix.truedamageapi.services.item.ItemDamageProvider;
 import net.enjoyfelix.truedamageapi.services.item.VanillaItemDamageProvider;
 import net.enjoyfelix.truedamageapi.services.resistance.ResistanceProvider;
@@ -18,13 +20,16 @@ public final class DamageAPI extends JavaPlugin {
 
     @Getter
     private static DamageAPI instance;
-    // both these providers are used to check if the damage dealt was a crit
+
+    // These providers are kept here because they are used in the client side computations
     @Getter
     private final VanillaStrengthProvider vanillaStrengthProvider = new VanillaStrengthProvider();
     @Getter
     private final VanillaWeaknessProvider vanillaWeaknessProvider = new VanillaWeaknessProvider();
     @Getter
     private final VanillaItemDamageProvider vanillaItemDamageProvider = new VanillaItemDamageProvider();
+    @Getter
+    private final VanillaBonusProvider vanillaBonusProvider = new VanillaBonusProvider();
 
     private boolean registered = false;
 
@@ -45,6 +50,7 @@ public final class DamageAPI extends JavaPlugin {
         Bukkit.getServicesManager().register(WeaknessProvider.class, vanillaWeaknessProvider, this, ServicePriority.Normal);
         Bukkit.getServicesManager().register(ResistanceProvider.class, new VanillaResistanceProvider(), this, ServicePriority.Normal);
         Bukkit.getServicesManager().register(ItemDamageProvider.class, vanillaItemDamageProvider, this, ServicePriority.Normal);
+        Bukkit.getServicesManager().register(BonusProvider.class, vanillaBonusProvider, this, ServicePriority.Normal);
         this.registered = true;
     }
 
@@ -62,6 +68,10 @@ public final class DamageAPI extends JavaPlugin {
 
     public ItemDamageProvider getItemDamageProvider(){
         return Bukkit.getServicesManager().getRegistration(ItemDamageProvider.class).getProvider();
+    }
+
+    public BonusProvider getBonusProvider(){
+        return Bukkit.getServicesManager().getRegistration(BonusProvider.class).getProvider();
     }
 
 }

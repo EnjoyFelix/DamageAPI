@@ -21,7 +21,6 @@ public class DamageUtils {
     private static final Random random = new Random();
     private static final Map<Material, Integer> ARMOR_RESISTANCE_MAP = new HashMap<>();
     private static final Map<Material, Integer> ITEM_DAMAGE_MAP = new HashMap<>();
-    private static final Set<EntityType> UNDEAD_MOBS = new HashSet<>();
 
     static {
         // leather armor
@@ -83,12 +82,6 @@ public class DamageUtils {
         ITEM_DAMAGE_MAP.put(Material.DIAMOND_PICKAXE, 5);
         ITEM_DAMAGE_MAP.put(Material.DIAMOND_AXE, 6);
         ITEM_DAMAGE_MAP.put(Material.DIAMOND_SWORD, 7);
-
-        // Undead mobs
-        UNDEAD_MOBS.add(EntityType.ZOMBIE);
-        UNDEAD_MOBS.add(EntityType.SKELETON);
-        UNDEAD_MOBS.add(EntityType.WITHER);
-        UNDEAD_MOBS.add(EntityType.PIG_ZOMBIE);
     }
 
 
@@ -267,8 +260,15 @@ public class DamageUtils {
     }
 
 
+    /**
+     * Computes the new Base Damages
+     * @param player the player dealing the damages
+     * @param originalDamage the original client side damages
+     * @return The new base damages
+     */
     private static double computeBaseDamage(final Player player, final double originalDamage) {
         // get the base damage dealt by the item
+        final DamageAPI damageAPI = DamageAPI.getInstance();
         final ItemStack itemInHand = player.getItemInHand();
         final double baseDamage;
         final double enchantementBonus;
@@ -286,12 +286,11 @@ public class DamageUtils {
             // compute the bonus given by enchantments from the item and the entity type
             final Map<Enchantment, Integer> activeEnchantments = itemInHand.getEnchantments();
             // TODO: specify entity types
-            enchantementBonus = getEnchantmentBonus(activeEnchantments, EntityType.PLAYER);
+            enchantementBonus = damageAPI.getBonusProvider().getBonus(itemInHand, EntityType.PLAYER);
         }
 
         // we need to know if the original damage was a crit or not
         // we can know using math and the vanilla providers
-        final DamageAPI damageAPI = DamageAPI.getInstance();
         final double vanillaStrengthScalar = damageAPI.getVanillaStrengthProvider().getTotalScalar(player);
         final double vanillaWeaknessReduction = damageAPI.getVanillaWeaknessProvider().getDamageReduction(player);
         final double critScalar = isHitCritical(originalDamage, baseDamage, vanillaStrengthScalar, vanillaWeaknessReduction,enchantementBonus) ? 1.5 : 1;
@@ -308,40 +307,16 @@ public class DamageUtils {
         // return the total damages
         return ((baseDamage - weaknessReduction) * strengthScalar * critScalar) + enchantementBonus;
     }
-    private static double getEnchantmentBonus(final ItemStack is, final EntityType mobType){
-        // early termination if the item is null or unenchanted
-        final Map<Enchantment, Integer> activeEnchants;
-        if (is == null || (activeEnchants = is.getEnchantments()) == null || activeEnchants.isEmpty())
-            return 0;
 
-        //
-        return getEnchantmentBonus(activeEnchants, mobType);
-    }
-
-    private static double getEnchantmentBonus(final Map<Enchantment, Integer> activeEnchants, final EntityType mobType){
-        double enchantBonus = 0;
-
-        // early termination if the item is not enchanted
-        if (activeEnchants == null || activeEnchants.isEmpty())
-            return 0;
-
-        // Sharpness, smite and BOA usually cannot be on a weapon at the same time, but idc this is not vanilla mc
-        // sharpness applies to every entity type
-        enchantBonus += activeEnchants.getOrDefault(Enchantment.DAMAGE_ALL, 0) * 1.25;
-
-        // smite
-        if (UNDEAD_MOBS.contains(mobType)){
-            enchantBonus += activeEnchants.getOrDefault(Enchantment.DAMAGE_UNDEAD, 0) * 2.5;
-        }
-
-        // bane of arthropods
-        if (mobType == EntityType.SPIDER || mobType == EntityType.CAVE_SPIDER) {
-            enchantBonus += activeEnchants.getOrDefault(Enchantment.DAMAGE_ARTHROPODS, 0) * 2.5;
-        }
-
-        return enchantBonus;
-    }
-
+    /**
+     * Computes the final damages and checks if the hit was a critical
+     * @param originalDamage the original "Base" damages
+     * @param basedamage the attack damages of the item in hand
+     * @param strengthScalar the vanilla strength scalar
+     * @param weaknessReduction the vanilla weakness reduction
+     * @param enchantBonus the vanilla enchant bonuses
+     * @return true if the hit was critical
+     */
     private static boolean isHitCritical(double originalDamage, double basedamage, double strengthScalar, double weaknessReduction, double enchantBonus){
         // float conversion issue so i have to do this
         return (int) ((originalDamage - enchantBonus) * 100) >= (int) ((basedamage - weaknessReduction) * strengthScalar * 150);
@@ -375,7 +350,7 @@ public class DamageUtils {
 
             // compute the bonus given by enchantments from the item and the entity type
             final Map<Enchantment, Integer> activeEnchantments = itemInHand.getEnchantments();
-            enchantementBonus = getEnchantmentBonus(activeEnchantments, damagedEntityType);
+            enchantementBonus = damageAPI.getBonusProvider().getBonus(itemInHand, damagedEntityType);
         }
 
         final StrengthProvider strengthProvider  = damageAPI.getVanillaStrengthProvider();
