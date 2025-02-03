@@ -1,6 +1,7 @@
 package net.enjoyfelix.truedamageapi.utils;
 
 import net.enjoyfelix.truedamageapi.DamageAPI;
+import net.enjoyfelix.truedamageapi.services.armor.ArmorProtectionProvider;
 import net.enjoyfelix.truedamageapi.services.bonusdamage.BonusProvider;
 import net.enjoyfelix.truedamageapi.services.bonusdamage.VanillaBonusProvider;
 import net.enjoyfelix.truedamageapi.services.item.ItemDamageProvider;
@@ -8,8 +9,7 @@ import net.enjoyfelix.truedamageapi.services.item.VanillaItemDamageProvider;
 import net.enjoyfelix.truedamageapi.services.resistance.ResistanceProvider;
 import net.enjoyfelix.truedamageapi.services.strength.StrengthProvider;
 import net.enjoyfelix.truedamageapi.services.weakness.WeaknessProvider;
-import org.bukkit.Material;
-import org.bukkit.enchantments.Enchantment;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
@@ -19,80 +19,16 @@ import org.bukkit.inventory.ItemStack;
 
 import java.lang.reflect.Method;
 import java.util.*;
+import java.util.logging.Level;
 
 public class DamageUtils {
 
-    private static final Random random = new Random();
-    private static final Map<Material, Integer> ARMOR_RESISTANCE_MAP = new HashMap<>();
-    private static final Map<Material, Integer> ITEM_DAMAGE_MAP = new HashMap<>();
-
-    static {
-        // leather armor
-        ARMOR_RESISTANCE_MAP.put(Material.LEATHER_HELMET, 1);
-        ARMOR_RESISTANCE_MAP.put(Material.LEATHER_CHESTPLATE, 3);
-        ARMOR_RESISTANCE_MAP.put(Material.LEATHER_LEGGINGS, 2);
-        ARMOR_RESISTANCE_MAP.put(Material.LEATHER_BOOTS, 1);
-
-        // chainmail armor
-        ARMOR_RESISTANCE_MAP.put(Material.CHAINMAIL_HELMET, 2);
-        ARMOR_RESISTANCE_MAP.put(Material.CHAINMAIL_CHESTPLATE, 5);
-        ARMOR_RESISTANCE_MAP.put(Material.CHAINMAIL_LEGGINGS, 4);
-        ARMOR_RESISTANCE_MAP.put(Material.CHAINMAIL_BOOTS, 1);
-
-        // iron armor
-        ARMOR_RESISTANCE_MAP.put(Material.IRON_HELMET, 2);
-        ARMOR_RESISTANCE_MAP.put(Material.IRON_CHESTPLATE, 6);
-        ARMOR_RESISTANCE_MAP.put(Material.IRON_LEGGINGS, 5);
-        ARMOR_RESISTANCE_MAP.put(Material.IRON_BOOTS, 2);
-
-        // gold armor
-        ARMOR_RESISTANCE_MAP.put(Material.GOLD_HELMET, 2);
-        ARMOR_RESISTANCE_MAP.put(Material.GOLD_CHESTPLATE, 5);
-        ARMOR_RESISTANCE_MAP.put(Material.GOLD_LEGGINGS, 3);
-        ARMOR_RESISTANCE_MAP.put(Material.GOLD_BOOTS, 1);
-
-        // diamond amor
-        ARMOR_RESISTANCE_MAP.put(Material.DIAMOND_HELMET, 3);
-        ARMOR_RESISTANCE_MAP.put(Material.DIAMOND_CHESTPLATE, 8);
-        ARMOR_RESISTANCE_MAP.put(Material.DIAMOND_LEGGINGS, 6);
-        ARMOR_RESISTANCE_MAP.put(Material.DIAMOND_BOOTS, 3);
-
-        // wooden tools
-        ITEM_DAMAGE_MAP.put(Material.WOOD_SPADE, 1);
-        ITEM_DAMAGE_MAP.put(Material.WOOD_PICKAXE, 2);
-        ITEM_DAMAGE_MAP.put(Material.WOOD_AXE, 3);
-        ITEM_DAMAGE_MAP.put(Material.WOOD_SWORD, 4);
-
-        // golden tools
-        ITEM_DAMAGE_MAP.put(Material.GOLD_SPADE, 1);
-        ITEM_DAMAGE_MAP.put(Material.GOLD_PICKAXE, 2);
-        ITEM_DAMAGE_MAP.put(Material.GOLD_AXE, 3);
-        ITEM_DAMAGE_MAP.put(Material.GOLD_SWORD, 4);
-
-        // stone tools
-        ITEM_DAMAGE_MAP.put(Material.STONE_SPADE, 2);
-        ITEM_DAMAGE_MAP.put(Material.STONE_PICKAXE, 3);
-        ITEM_DAMAGE_MAP.put(Material.STONE_AXE, 4);
-        ITEM_DAMAGE_MAP.put(Material.STONE_SWORD, 5);
-
-        // iron tools
-        ITEM_DAMAGE_MAP.put(Material.IRON_SPADE, 3);
-        ITEM_DAMAGE_MAP.put(Material.IRON_PICKAXE, 4);
-        ITEM_DAMAGE_MAP.put(Material.IRON_AXE, 5);
-        ITEM_DAMAGE_MAP.put(Material.IRON_SWORD, 6);
-
-        // diamond tools
-        ITEM_DAMAGE_MAP.put(Material.DIAMOND_SPADE, 4);
-        ITEM_DAMAGE_MAP.put(Material.DIAMOND_PICKAXE, 5);
-        ITEM_DAMAGE_MAP.put(Material.DIAMOND_AXE, 6);
-        ITEM_DAMAGE_MAP.put(Material.DIAMOND_SWORD, 7);
-    }
-
-
-    // SOURCED FROM EntityHuman::d(DamageSource damagesource, float f) {
+    // MAIN FUNCTION
+    // SOURCED FROM EntityHuman::d(DamageSource damagesource, float f)
     public static void computeDamage(final EntityDamageByEntityEvent event) {
         final Player damager = (Player) event.getDamager();
         final Player damagee = (Player) event.getEntity();
+        final DamageAPI damageAPI = DamageAPI.getInstance();
         double originalDamage = event.getOriginalDamage(EntityDamageEvent.DamageModifier.BASE);
 
         // compute the base damage;
@@ -110,20 +46,23 @@ public class DamageUtils {
 
         // update the damage based on the armor and magic
         // get the armor's ratio
-        final double armorModifier = getArmorModifier(damagee);
+        final ArmorProtectionProvider armorProvider = damageAPI.getArmorProtectionProvider();
+        final double armorModifier = armorProvider.getArmorModifier(damagee);
         final double armorDeductible = -damage * (1 - armorModifier);
         damage += armorDeductible;
         event.setDamage(EntityDamageEvent.DamageModifier.ARMOR, armorDeductible);
 
 
         // apply the resistance;
-        final double resistancePercent = getResistanceScalar(damagee);
+        final ResistanceProvider resistanceProvider = damageAPI.getResistanceProvider();
+        final double resistancePercent = resistanceProvider.getTotalScalar(damagee);
         final double resistanceDeductible = -damage * (1 - resistancePercent);
         damage += resistanceDeductible;
         event.setDamage(EntityDamageEvent.DamageModifier.RESISTANCE, resistanceDeductible);
 
         // apply the level of protection
-        final double protectionPercent = getArmorEnchantmentsPercent(damagee);
+
+        final double protectionPercent = armorProvider.getArmorEnchantmentsPercent(damagee);
         final double protectionDeductible = -damage * (1 - protectionPercent);
         damage += protectionDeductible;
         event.setDamage(EntityDamageEvent.DamageModifier.MAGIC, protectionDeductible);
@@ -140,64 +79,18 @@ public class DamageUtils {
         event.setDamage(EntityDamageEvent.DamageModifier.ABSORPTION, takenAbsorptionHearts);
     }
 
-    private static float getArmorModifier(final Player damagee) {
-        return (25f - getArmorCoverForPlayer(damagee)) / 25f;
-    }
-
     /**
-     * Computes the total cover given by the player's armor (does not include the enchantments)
-     * @param damagee the damaged player
-     * @return the total cover
+     * Queries the number of absorption hearts of the player
+     * @param damagee the player receiving the damages
+     * @return the number of 1/2 absorption hearts
      */
-    public static int getArmorCoverForPlayer(final Player damagee) {
-
-        int totalCover = 0;
-        final ItemStack[] armor = damagee.getEquipment().getArmorContents();
-
-        // sum every piece's cover
-        for (final ItemStack currentPiece : armor) {
-            // filter for non null items
-            if (currentPiece == null)
-                continue;
-
-            // material of the piece;
-            final Material itemType = currentPiece.getType();
-
-            // get the armor piece's absorption (ex: a diamond chestplate gets you 8);
-            Integer materialCover = ARMOR_RESISTANCE_MAP.get(itemType);
-
-            // the material is not an armor
-            if (materialCover == null)
-                continue;
-
-            totalCover += materialCover;
-        }
-
-        return totalCover;
-    }
-
-    /**
-     * Returns the percentage to multiply the damage by
-     * /!\: The armor's reduction should already have been removed
-     * @param damagee The damagee
-     * @return 1 - ([resistance level + 1] / 5);
-     */
-    public static double getResistanceScalar(final Player damagee) {
-        // get the resistance provider
-        final DamageAPI damageAPI = DamageAPI.getInstance();
-        final ResistanceProvider resistanceProvider = damageAPI.getResistanceProvider();
-
-        // return the scalar of the player
-        return resistanceProvider.getTotalScalar(damagee);
-    }
-
     private static double getAbsorptionHearts(final Player damagee) {
         try {
             // get the "craftplayer"
             Object entityPlayer = damagee.getClass().getMethod("getHandle").invoke(damagee);
 
             // the "getAbsorptionHearts" method
-            Method methodGetAbsorptionHeart = entityPlayer.getClass().getDeclaredMethod("getAbsorptionHearts");
+            Method methodGetAbsorptionHeart = entityPlayer.getClass().getSuperclass().getDeclaredMethod("getAbsorptionHearts");
 
             // invoke
             return (Double) methodGetAbsorptionHeart.invoke(entityPlayer);
@@ -205,64 +98,6 @@ public class DamageUtils {
             return 0.0;
         }
     }
-
-    public static float getArmorEnchantmentsPercent(final Player damagee) {
-        final ItemStack[] armorContent = damagee.getEquipment().getArmorContents();
-
-        int protectionCount = getProtectionCount(armorContent);
-        if (protectionCount > 20) {
-            protectionCount = 20;
-        }
-
-        if (protectionCount <= 0)
-            return 1.0f;
-
-
-        return (25f - protectionCount) / 25f;
-    }
-
-    public static int getProtectionCount(final ItemStack[] armorContents) {
-
-        // idk but this seems like the total number of protections (weirdaf)
-        int modifierProtectionCount = 0;
-        for (int i = 0; i < armorContents.length; ++i) {
-            final ItemStack armorPiece = armorContents[i];
-            modifierProtectionCount += getDamageReductionForPiece(armorPiece);
-        }
-
-        // cap the count
-        if (modifierProtectionCount > 25) {
-            modifierProtectionCount = 25;
-
-        } else if (modifierProtectionCount < 0) {
-            modifierProtectionCount = 0;
-        }
-
-        return (modifierProtectionCount + 1 >> 1) + random.nextInt((modifierProtectionCount >> 1) + 1);
-    }
-
-    private static int getDamageReductionForPiece(final ItemStack armorPiece) {
-        if (armorPiece == null)
-            return 0;
-
-        // get the enchant map
-        final Map<Enchantment, Integer> enchantMap = armorPiece.getEnchantments();
-        if (enchantMap == null)
-            return 0;
-
-        // get the level of protection
-        final Integer protectionLevel = enchantMap.get(Enchantment.PROTECTION_ENVIRONMENTAL);
-        if (protectionLevel == null)
-            return 0;
-
-        // get the damageReductionFrom given by the protection level of the piece
-        float value = (float) (6 + protectionLevel * protectionLevel) / 3.0F;
-
-        // Math.d()
-        int valueInt = (int) (value * 0.75F);
-        return value < (float) valueInt ? valueInt - 1 : valueInt;
-    }
-
 
     /**
      * Computes the new Base Damages

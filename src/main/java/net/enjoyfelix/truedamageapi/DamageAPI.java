@@ -2,6 +2,8 @@ package net.enjoyfelix.truedamageapi;
 
 import lombok.Getter;
 import net.enjoyfelix.truedamageapi.listeners.DamageListener;
+import net.enjoyfelix.truedamageapi.services.armor.ArmorProtectionProvider;
+import net.enjoyfelix.truedamageapi.services.armor.VanillaArmorProtectionProvider;
 import net.enjoyfelix.truedamageapi.services.bonusdamage.BonusProvider;
 import net.enjoyfelix.truedamageapi.services.bonusdamage.VanillaBonusProvider;
 import net.enjoyfelix.truedamageapi.services.item.ItemDamageProvider;
@@ -51,6 +53,7 @@ public final class DamageAPI extends JavaPlugin {
         Bukkit.getServicesManager().register(ResistanceProvider.class, new VanillaResistanceProvider(), this, ServicePriority.Normal);
         Bukkit.getServicesManager().register(ItemDamageProvider.class, vanillaItemDamageProvider, this, ServicePriority.Normal);
         Bukkit.getServicesManager().register(BonusProvider.class, vanillaBonusProvider, this, ServicePriority.Normal);
+        Bukkit.getServicesManager().register(ArmorProtectionProvider.class, new VanillaArmorProtectionProvider(), this, ServicePriority.Normal);
         this.registered = true;
     }
 
@@ -72,6 +75,10 @@ public final class DamageAPI extends JavaPlugin {
 
     public BonusProvider getBonusProvider(){
         return Bukkit.getServicesManager().getRegistration(BonusProvider.class).getProvider();
+    }
+
+    public ArmorProtectionProvider getArmorProtectionProvider(){
+        return Bukkit.getServicesManager().getRegistration(ArmorProtectionProvider.class).getProvider();
     }
 
 }
