@@ -87,15 +87,15 @@ public class DamageUtils {
     private static double getAbsorptionHearts(final Player damagee) {
         try {
             // get the "craftplayer"
-            Object entityPlayer = damagee.getClass().getMethod("getHandle").invoke(damagee);
+            Object craftPlayer = damagee.getClass().getMethod("getHandle").invoke(damagee);
 
-            // the "getAbsorptionHearts" method
-            Method methodGetAbsorptionHeart = entityPlayer.getClass().getSuperclass().getDeclaredMethod("getAbsorptionHearts");
+            // the "getAbsorptionHearts" method from EntityPlayer
+            Method getAbsorptionHearts = craftPlayer.getClass().getMethod("getAbsorptionHearts");
 
             // invoke
-            return (Double) methodGetAbsorptionHeart.invoke(entityPlayer);
+            return (float) (Float) getAbsorptionHearts.invoke(craftPlayer);
         } catch (Exception e) {
-            return 0.0;
+            return 0.0F;
         }
     }
 
