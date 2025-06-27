@@ -1,3 +1,0 @@
-name: DamageAPI
-version: '${project.version}'
-main: net.enjoyfelix.truedamageapi.DamageAPI

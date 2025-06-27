@@ -15,12 +15,10 @@ import net.enjoyfelix.truedamageapi.services.strength.VanillaStrengthProvider;
 import net.enjoyfelix.truedamageapi.services.weakness.VanillaWeaknessProvider;
 import net.enjoyfelix.truedamageapi.services.weakness.WeaknessProvider;
 import org.bukkit.Bukkit;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.ServicePriority;
-import org.bukkit.plugin.java.JavaPlugin;
 
-public final class DamageAPI extends JavaPlugin {
-
-    @Getter
+public final class DamageAPI {
     private static DamageAPI instance;
 
     // These providers are kept here because they are used in the client side computations
@@ -35,25 +33,29 @@ public final class DamageAPI extends JavaPlugin {
 
     private boolean registered = false;
 
-    @Override
-    public void onEnable() {
-        instance = this;
-        Bukkit.broadcastMessage("Damage API By EnjoyFelix !");
+    private DamageAPI() {}
+
+    public static DamageAPI getInstance() {
+        if (instance == null) {
+            instance = new DamageAPI();
+        }
+
+        return instance;
     }
 
-    public void register(){
+    public void register(final Plugin plugin){
         if (registered)
             return;
         // register the listener
-        Bukkit.getPluginManager().registerEvents(new DamageListener(), this);
+        Bukkit.getPluginManager().registerEvents(new DamageListener(), plugin);
 
         // register the default providers;
-        Bukkit.getServicesManager().register(StrengthProvider.class, vanillaStrengthProvider, this, ServicePriority.Normal);
-        Bukkit.getServicesManager().register(WeaknessProvider.class, vanillaWeaknessProvider, this, ServicePriority.Normal);
-        Bukkit.getServicesManager().register(ResistanceProvider.class, new VanillaResistanceProvider(), this, ServicePriority.Normal);
-        Bukkit.getServicesManager().register(ItemDamageProvider.class, vanillaItemDamageProvider, this, ServicePriority.Normal);
-        Bukkit.getServicesManager().register(BonusProvider.class, vanillaBonusProvider, this, ServicePriority.Normal);
-        Bukkit.getServicesManager().register(ArmorProtectionProvider.class, new VanillaArmorProtectionProvider(), this, ServicePriority.Normal);
+        Bukkit.getServicesManager().register(StrengthProvider.class, vanillaStrengthProvider, plugin, ServicePriority.Normal);
+        Bukkit.getServicesManager().register(WeaknessProvider.class, vanillaWeaknessProvider, plugin, ServicePriority.Normal);
+        Bukkit.getServicesManager().register(ResistanceProvider.class, new VanillaResistanceProvider(), plugin, ServicePriority.Normal);
+        Bukkit.getServicesManager().register(ItemDamageProvider.class, vanillaItemDamageProvider, plugin, ServicePriority.Normal);
+        Bukkit.getServicesManager().register(BonusProvider.class, vanillaBonusProvider, plugin, ServicePriority.Normal);
+        Bukkit.getServicesManager().register(ArmorProtectionProvider.class, new VanillaArmorProtectionProvider(), plugin, ServicePriority.Normal);
         this.registered = true;
     }
 
