@@ -137,7 +137,7 @@ public class DamageUtils {
         final double enchantBonus = bonusProvider.getBonus(itemInHand, EntityType.PLAYER);
 
         // return the total damages
-        return ((baseDamage - weaknessReduction) * strengthScalar * critScalar) + enchantBonus;
+        return ((baseDamage - Math.min(weaknessReduction, baseDamage)) * strengthScalar * critScalar) + enchantBonus;
     }
 
     /**
